@@ -12,5 +12,5 @@ public interface IInputListener
     //物体滑动
     void inputWorldMove(Vector2 delta, Vector2 totalDelta, AYInput ayInput);
     //按下
-    void OnPressed(bool pressed);
+    void OnPressed(bool pressed,bool isRight);
 }

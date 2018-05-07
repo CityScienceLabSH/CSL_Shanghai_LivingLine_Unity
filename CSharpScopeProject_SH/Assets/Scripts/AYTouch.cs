@@ -29,6 +29,8 @@ public class AYInput
     public Vector3 delta;
     public Vector3 totalDelta;
 
+    public bool rightMouse;
+
 
     public GameObject FirstHitGameObject
     {
@@ -178,11 +180,11 @@ public class AYTouch : MonoBehaviour
 
                 if (ayInput.state == AYInput.AYInputState.start)
                 {
-                    listener.OnPressed(true);
+                    listener.OnPressed(true,ayInput.rightMouse);
                 }
                 else if (ayInput.state == AYInput.AYInputState.leave)
                 {
-                    listener.OnPressed(false);
+                    listener.OnPressed(false, ayInput.rightMouse);
                 }
             }
         }
@@ -213,6 +215,25 @@ public class AYTouch : MonoBehaviour
         {
             ayInput = new AYInput();
             ayInput.state = AYInput.AYInputState.mouseDown;
+        }
+
+        if (Input.GetMouseButtonDown(1))
+        {
+            ayInput = new AYInput();
+            ayInput.state = AYInput.AYInputState.start;
+            ayInput.rightMouse = true;
+        }
+        if (Input.GetMouseButtonUp(1))
+        {
+            ayInput = new AYInput();
+            ayInput.state = AYInput.AYInputState.leave;
+            ayInput.rightMouse = true;
+        }
+        if (Input.GetMouseButton(1) && !Input.GetMouseButtonDown(1))
+        {
+            ayInput = new AYInput();
+            ayInput.state = AYInput.AYInputState.mouseDown;
+            ayInput.rightMouse = true;
         }
 
         if (ayInput != null)

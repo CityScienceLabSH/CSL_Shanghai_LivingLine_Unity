@@ -10,6 +10,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using UnityEngine.UI;
 
 
 [System.Serializable]
@@ -21,11 +22,34 @@ public class ColorSettings
     public Vector3 gridPosition;
     public Vector3 dockPosition;
     public List<int> mask;
+    public List<MaskPointData> maskPointData;
 
     public ColorSettings()
     {
         color = new List<Color>();
         id = new List<int>();
+        mask = new List<int>();
+        maskPointData = new List<MaskPointData>();
+    }
+}
+
+[System.Serializable]
+public class MaskPointData
+{
+    public int cubeIndex;
+    public int innerCubeIndex;
+    public bool isMask;
+
+    public MaskPointData()
+    {
+
+    }
+
+    public MaskPointData(MaskPoint maskPoint)
+    {
+        this.cubeIndex = maskPoint.cubeIndex;
+        this.innerCubeIndex = maskPoint.innerCubeIndex;
+        this.isMask = maskPoint.isMask;
     }
 }
 
@@ -204,7 +228,8 @@ public class Scanners : MonoBehaviour
         ScanColors();
 
         // Update Table's currId store
-        Table.Instance.CreateGrid(ref currentIds);
+        //Table.Instance.CreateGrid(ref currentIds);
+        SingletonT<BuildingManager>.Instance.ShowBuildings(maskerList);
 
         // Update slider & dock readings
         if (_enableUI)
@@ -233,6 +258,7 @@ public class Scanners : MonoBehaviour
         onKeyPressed();
     }
 
+   
     /// <summary>
     /// Initializes the variables.
     /// </summary>
@@ -452,7 +478,8 @@ public class Scanners : MonoBehaviour
 
                 // Paint scanner with the found color 
                 currScanners[i, j].GetComponent<Renderer>().material.color = minColor;
-
+                currMaskers[i, j].currID = currID;
+                currMaskers[i, j].color = minColor;
                 return currID;
             }
         }
@@ -627,7 +654,7 @@ public class Scanners : MonoBehaviour
 
         dock.SetDockPosition(colorSettings.dockPosition);
 
-        if (colorSettings.mask != null && maskerList != null)
+        if (colorSettings.maskPointData != null && maskerList != null)
         {
             int maskIndex = 0;
 
@@ -635,9 +662,9 @@ public class Scanners : MonoBehaviour
             {
                 for (int y = 0; y < numOfScannersY; y++)
                 {
-                    if (maskIndex < colorSettings.mask.Count)
-                        maskerList[x, y].SetMask(colorSettings.mask[maskIndex] == 1 ? true : false);
-
+                    if (maskIndex < colorSettings.maskPointData.Count)
+                        //maskerList[x, y].SetMask(colorSettings.mask[maskIndex] == 1 ? true : false);
+                        maskerList[x, y].SetMask(colorSettings.maskPointData[maskIndex]);
 
                     maskIndex++;
                 }
@@ -680,13 +707,13 @@ public class Scanners : MonoBehaviour
 
                 int result = maskerList[x, y].isMask ? 1 : 0;
 
-                if (colorSettings.mask.Count <= i)
+                if (colorSettings.maskPointData.Count <= i)
                 {
-                    colorSettings.mask.Add(result);
+                    colorSettings.maskPointData.Add(new MaskPointData(maskerList[x, y]));
 
                 }
                 else {
-                    colorSettings.mask[i] = result;
+                    colorSettings.maskPointData[i] = new MaskPointData(maskerList[x, y]);
                 }
 
                 i++;
@@ -761,5 +788,14 @@ public class Scanners : MonoBehaviour
     public int GetSliderValue()
     {
         return this.slider.GetSliderValue();
+    }
+
+    public void SaveMaskData()
+    {
+        if(MaskPoint.s_SelectMaskPoint!=null)
+        {
+            MaskPoint.s_SelectMaskPoint.cubeIndex = int.Parse(Tool.GetChildInDepth("MaskInnerInputField", GameObject.Find("MaskUI")).GetComponent<InputField>().text);
+            MaskPoint.s_SelectMaskPoint.innerCubeIndex = int.Parse(Tool.GetChildInDepth("MaskInputField", GameObject.Find("MaskUI")).GetComponent<InputField>().text );
+        }
     }
 }
