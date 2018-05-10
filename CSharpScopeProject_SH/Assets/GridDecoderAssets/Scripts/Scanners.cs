@@ -53,6 +53,15 @@ public class MaskPointData
     }
 }
 
+[System.Serializable]
+public class GridData
+{
+    public Vector3 position;
+    public string buildingID;
+
+    public float scale;
+}
+
 public class Scanners : MonoBehaviour
 {
     private Thread scannerThread;
@@ -109,7 +118,7 @@ public class Scanners : MonoBehaviour
 
     // Color calibration
     ColorSettings colorSettings;
-    ColorClassifier colorClassifier;
+    public ColorClassifier colorClassifier;
 
     private Dictionary<ColorClassifier.SampleColor, GameObject> colorRefSpheres;
     public Color[] sampleColors;
@@ -119,9 +128,11 @@ public class Scanners : MonoBehaviour
     public string _colorSettingsFileName = "_sampleColorSettings.json";
     private bool shouldReassignTexture;
 
-    private Texture2D hitTex;
+    public Texture2D hitTex;
 
     private Color[] allColors;
+
+    public List<ScannerGridGroup> groupList = new List<ScannerGridGroup>();
 
     private Dictionary<string, Brick> idList = new Dictionary<string, Brick>
     {
@@ -144,13 +155,15 @@ public class Scanners : MonoBehaviour
 
         shouldReassignTexture = true;
 
-        scannerThread = new Thread(UpdateScanners);
-        scannerThread.Start();
+        //scannerThread = new Thread(UpdateScanners);
+        //scannerThread.Start();
 
         InitVariables();
 
         EventManager.StartListening("reload", OnReload);
         EventManager.StartListening("save", OnSave);
+        InvokeRepeating("UpdateScanners", 0, 0.1f);
+        OnReload();
     }
 
     IEnumerator Start()
@@ -167,6 +180,7 @@ public class Scanners : MonoBehaviour
             AssignRenderTexture();
             yield return new WaitForSeconds(0.2f);
             UpdateScanners();
+            SetupSampleObjects();
         }
     }
 
@@ -215,15 +229,15 @@ public class Scanners : MonoBehaviour
 
     private void UpdateScanners()
     {
-        if (updateScannerObjects)
-        {
-            UpdateScannerObjects();
-            updateScannerObjects = false;
-        }
+        //if (updateScannerObjects)
+        //{
+        //    UpdateScannerObjects();
+        //    updateScannerObjects = false;
+        //}
 
-        if (_isCalibrating || setup)
-            CalibrateColors();
 
+        //if (_isCalibrating || setup)
+        CalibrateColors();
         // Assign scanner colors
         ScanColors();
 
@@ -258,12 +272,13 @@ public class Scanners : MonoBehaviour
         onKeyPressed();
     }
 
-   
+
     /// <summary>
     /// Initializes the variables.
     /// </summary>
     private void InitVariables()
     {
+        //@@
         numOfScannersX = _gridSizeX * _gridSize;
         numOfScannersY = _gridSizeY * _gridSize;
         scannersList = new GameObject[numOfScannersX, numOfScannersY];
@@ -273,9 +288,9 @@ public class Scanners : MonoBehaviour
         colorClassifier = new ColorClassifier();
         idBuffer = new Queue<int>[numOfScannersX * numOfScannersY];
 
-        MakeScanners();
-        MakeMasks();
-        SetupSampleObjects();
+        //MakeScanners();
+        //MakeMasks();
+        //SetupSampleObjects();
 
         // Create UX scanners
         dock = new Dock(this.gameObject, _gridSize, _scannerScale);
@@ -287,7 +302,7 @@ public class Scanners : MonoBehaviour
         // Copy mesh with RenderTexture
         keystonedQuad = GameObject.Find(colorTexturedQuadName);
 
-        LoadScannerSettings();
+        //LoadScannerSettings();
 
         EventManager.TriggerEvent("scannersInitialized");
     }
@@ -355,26 +370,34 @@ public class Scanners : MonoBehaviour
     /// </summary>
     private void ScanColors()
     {
-        string key = "";
-        for (int i = 0; i < numOfScannersX; i += _gridSize)
-        {
-            for (int j = 0; j < numOfScannersY; j += _gridSize)
-            {
-                currentIds[i / _gridSize, j / _gridSize] = FindCurrentId(key, i, j, ref scannersList, true);
-            }
-        }
+        //@@
+        //string key = "";
+        //for (int i = 0; i < numOfScannersX; i += _gridSize)
+        //{
+        //    for (int j = 0; j < numOfScannersY; j += _gridSize)
+        //    {
+        //        currentIds[i / _gridSize, j / _gridSize] = FindCurrentId(key, i, j, ref scannersList, true);
+        //    }
+        //}
 
-        if (setup)
+        //if (setup)
+        //{
+        //    if (_showDebugColors)
+        //        colorClassifier.SortColors(allColors, _colorSpaceParent);
+        //    colorClassifier.Create3DColorPlot(allColors, _colorSpaceParent);
+        //}
+        //if (_isCalibrating)
+        //{
+        //    colorClassifier.Update3DColorPlot(allColors, _colorSpaceParent);
+        //}
+
+        foreach (ScannerGridGroup group in groupList)
         {
-            if (_showDebugColors)
-                colorClassifier.SortColors(allColors, _colorSpaceParent);
-            colorClassifier.Create3DColorPlot(allColors, _colorSpaceParent);
-        }
-        if (_isCalibrating)
-        {
-            colorClassifier.Update3DColorPlot(allColors, _colorSpaceParent);
+            group.UpdateColor();
         }
     }
+
+
 
 
     /// <summary>
@@ -618,8 +641,6 @@ public class Scanners : MonoBehaviour
                     float offset = GameObject.Find(colorTexturedQuadName).GetComponent<Renderer>().bounds.size.x * 0.5f;
                     maskerList[x, y].transform.localPosition = new Vector3(x * _scannerScale * 2 - offset, 0.2f, y * _scannerScale * 2 - offset);
                 }
-
-
             }
         }
     }
@@ -792,10 +813,26 @@ public class Scanners : MonoBehaviour
 
     public void SaveMaskData()
     {
-        if(MaskPoint.s_SelectMaskPoint!=null)
+        if (MaskPoint.s_SelectMaskPoint != null)
         {
             MaskPoint.s_SelectMaskPoint.cubeIndex = int.Parse(Tool.GetChildInDepth("MaskInnerInputField", GameObject.Find("MaskUI")).GetComponent<InputField>().text);
-            MaskPoint.s_SelectMaskPoint.innerCubeIndex = int.Parse(Tool.GetChildInDepth("MaskInputField", GameObject.Find("MaskUI")).GetComponent<InputField>().text );
+            MaskPoint.s_SelectMaskPoint.innerCubeIndex = int.Parse(Tool.GetChildInDepth("MaskInputField", GameObject.Find("MaskUI")).GetComponent<InputField>().text);
+        }
+    }
+
+    public bool CreateGirdFlag;
+
+    public void CreateGrid()
+    {
+        CreateGirdFlag = true;
+
+    }
+
+    public void UpdateBuildingID(string name)
+    {
+        if(ScannerGridGroup.selectScannerGrid!=null)
+        {
+            ScannerGridGroup.selectScannerGrid.buildingID = name;
         }
     }
 }
