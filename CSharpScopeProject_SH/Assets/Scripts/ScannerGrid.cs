@@ -11,6 +11,8 @@ public class ScannerGrid : MonoBehaviour {
     public int scannerId;
     public Color color;
 
+    public bool needUpdateColor;
+
     void Start () {
 		
 	}
@@ -20,17 +22,24 @@ public class ScannerGrid : MonoBehaviour {
         RaycastHit hit;
         hitTex = SingletonTMono<Scanners>.Instance.hitTex;
         colorClassifier = SingletonTMono<Scanners>.Instance.colorClassifier;
-        if (Physics.Raycast(transform.position, Vector3.down, out hit, 6))
+
+        
+
+        if (Physics.Raycast(transform.position, Vector3.down, out hit, 6,1<<9))
         {
             // Get local tex coords w.r.t. triangle
             if (!hitTex)
             {
                 Debug.Log("No hit texture");
-                GetComponent<Renderer>().material.color = Color.magenta;
+                if (needUpdateColor)
+                {
+                    GetComponent<Renderer>().material.color = Color.magenta;
+                }
                 return -1;
             }
             else
             {
+                
                 int _locX = Mathf.RoundToInt(hit.textureCoord.x * hitTex.width);
                 int _locY = Mathf.RoundToInt(hit.textureCoord.y * hitTex.height);
                 Color pixel = hitTex.GetPixel(_locX, _locY);
@@ -71,16 +80,33 @@ public class ScannerGrid : MonoBehaviour {
                     Debug.Log(hit.point);
                 }
 
+                if (needUpdateColor)
+                {
+                    GetComponent<Renderer>().material.color = minColor;
+                }
                 // Paint scanner with the found color 
-                GetComponent<Renderer>().material.color = minColor;
+               
                 color = minColor;
                 return currID;
             }
         }
         else
         {
-            GetComponent<Renderer>().material.color = Color.magenta; //paint scanner with Out of bounds / invalid  color 
+            if (needUpdateColor)
+            {
+                GetComponent<Renderer>().material.color = Color.magenta; //paint scanner with Out of bounds / invalid  color 
+            }
             return -1;
+        }
+    }
+
+    public void SetIsShow(bool isShow)
+    {
+        needUpdateColor = isShow;
+
+        if(!isShow)
+        {
+            GetComponent<Renderer>().material.color = Color.yellow;
         }
     }
 

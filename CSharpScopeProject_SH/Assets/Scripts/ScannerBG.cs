@@ -31,6 +31,7 @@ public class ScannerBG : MonoBehaviour, IInputListener
             SingletonTMono<Scanners>.Instance.CreateGirdFlag = false;
             SingletonTMono<Scanners>.Instance.groupList.Add(go.GetComponent<ScannerGridGroup>());
             go.GetComponent<ScannerGridGroup>().Select(true);
+            go.GetComponent<ScannerGridGroup>().SetIsShow(SingletonTMono<Scanners>.Instance.bShowGrid);
         }
     }
 

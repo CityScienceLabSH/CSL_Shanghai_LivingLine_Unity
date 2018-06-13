@@ -4,14 +4,15 @@
 /// </summary>
 
 using System;
-using UnityEditor;
+
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using UnityEngine.UI;
-
+using Newtonsoft.Json.Linq;
+using UnityEngine.Video;
 
 [System.Serializable]
 public class ColorSettings
@@ -23,6 +24,9 @@ public class ColorSettings
     public Vector3 dockPosition;
     public List<int> mask;
     public List<MaskPointData> maskPointData;
+    public List<GridData> girdDataList;
+
+    
 
     public ColorSettings()
     {
@@ -30,6 +34,7 @@ public class ColorSettings
         id = new List<int>();
         mask = new List<int>();
         maskPointData = new List<MaskPointData>();
+        girdDataList = new List<GridData>();
     }
 }
 
@@ -60,6 +65,19 @@ public class GridData
     public string buildingID;
 
     public float scale;
+
+    public GridData()
+    {
+
+    }
+
+    public GridData(ScannerGridGroup group)
+    {
+        Debug.Log("11111@@" + position);
+        this.position = group.transform.position;
+        this.buildingID = group.buildingID;
+        this.scale = group.scale;
+    }
 }
 
 public class Scanners : MonoBehaviour
@@ -126,11 +144,16 @@ public class Scanners : MonoBehaviour
 
     private string colorTexturedQuadName = "KeystonedTextureQuad";
     public string _colorSettingsFileName = "_sampleColorSettings.json";
+    public string buildingStettingFileName = "building_list.json";
+    public string dock_0StettingFileName = "Dock_0.json";
+    public string dock_1StettingFileName = "Dock_1.json";
     private bool shouldReassignTexture;
 
     public Texture2D hitTex;
 
     private Color[] allColors;
+
+	public GameObject maskUI;
 
     public List<ScannerGridGroup> groupList = new List<ScannerGridGroup>();
 
@@ -145,8 +168,17 @@ public class Scanners : MonoBehaviour
         { "2101", Brick.ROAD }
     };
 
+    public JObject buildingSettingJO;
+    public JObject dock0SettingJO;
+    public JObject dock1SettingJO;
+
+    public VideoClip video1;
+    public VideoClip video2;
+
+    public bool inShowDock;
     void Awake()
     {
+        inShowDock = false;
         if (_useWebcam)
         {
             if (!GetComponent<Webcam>().enabled)
@@ -162,12 +194,26 @@ public class Scanners : MonoBehaviour
 
         EventManager.StartListening("reload", OnReload);
         EventManager.StartListening("save", OnSave);
-        InvokeRepeating("UpdateScanners", 0, 0.1f);
-        OnReload();
+        //InvokeRepeating("UpdateScanners", 0, 0.1f);
+        
+        maskUI = GameObject.Find("MaskUI");
     }
 
     IEnumerator Start()
     {
+        OnReload();
+         Debug.Log("Display.displays.Length..."+Display.displays.Length);
+    if(Display.displays.Length>1)
+    {
+        Display.displays[1].Activate();
+        Debug.Log("!!!!!!!!!!!1");
+    }
+if(Display.displays.Length>2)
+{
+    Display.displays[2].Activate();
+    Debug.Log("!!!!!!!!!!!2");
+}
+        
         while (true)
         {
             ////
@@ -178,10 +224,11 @@ public class Scanners : MonoBehaviour
             // Assign render texture from keystoned quad texture copy & copy it to a Texture2D
             //if (_useWebcam || shouldReassignTexture)
             AssignRenderTexture();
-            yield return new WaitForSeconds(0.2f);
+            yield return new WaitForSeconds(0.3f);
             UpdateScanners();
-            SetupSampleObjects();
+            //SetupSampleObjects();
         }
+
     }
 
     public void ToggleCalibration()
@@ -243,7 +290,8 @@ public class Scanners : MonoBehaviour
 
         // Update Table's currId store
         //Table.Instance.CreateGrid(ref currentIds);
-        SingletonT<BuildingManager>.Instance.ShowBuildings(maskerList);
+        //SingletonT<BuildingManager>.Instance.ShowBuildings(maskerList);
+        SingletonT<BuildingManager>.Instance.ShowBuildings(this.groupList);
 
         // Update slider & dock readings
         if (_enableUI)
@@ -272,6 +320,13 @@ public class Scanners : MonoBehaviour
         onKeyPressed();
     }
 
+    void OnGUI()
+    {
+        if(GUILayout.Button("!!!!!"))
+        {
+            ShowDock0(1);
+        }
+    }
 
     /// <summary>
     /// Initializes the variables.
@@ -293,8 +348,8 @@ public class Scanners : MonoBehaviour
         //SetupSampleObjects();
 
         // Create UX scanners
-        dock = new Dock(this.gameObject, _gridSize, _scannerScale);
-        slider = new LegoSlider(this.gameObject, _scannerScale, _sliderRange);
+        //dock = new Dock(this.gameObject, _gridSize, _scannerScale);
+        //slider = new LegoSlider(this.gameObject, _scannerScale, _sliderRange);
 
         // Original keystoned object with webcam texture / video
         cameraKeystonedQuad = GameObject.Find("CameraKeystoneQuad");
@@ -329,7 +384,7 @@ public class Scanners : MonoBehaviour
 
     private void UpdateSphereColor(GameObject sphere)
     {
-        sphere.GetComponent<Renderer>().material.color = new Color(sphere.transform.localPosition.x, sphere.transform.localPosition.y, sphere.transform.localPosition.z);
+        //sphere.GetComponent<Renderer>().material.color = new Color(sphere.transform.localPosition.x, sphere.transform.localPosition.y, sphere.transform.localPosition.z);
     }
 
     /// <summary>
@@ -356,6 +411,7 @@ public class Scanners : MonoBehaviour
     /// <param name="c">C.</param>
     private void CreateColorSphere(ColorClassifier.SampleColor color, Color c)
     {
+        Debug.Log("CreateColorSphere!!!!!");
         float scale = 0.1f;
         colorRefSpheres[color] = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         colorRefSpheres[color].name = "sphere_" + color;
@@ -397,7 +453,17 @@ public class Scanners : MonoBehaviour
         }
     }
 
+   public bool bShowGrid = false;
 
+    public void GridShowFlag()
+    {
+
+        bShowGrid = Tool.GetChildInDepth("GridShowFlag", GameObject.Find("MaskUI")).GetComponent<Toggle>().isOn;
+        foreach (ScannerGridGroup gridGroup in this.groupList)
+        {
+            gridGroup.SetIsShow(!bShowGrid);
+        }
+    }
 
 
     /// <summary>
@@ -425,7 +491,8 @@ public class Scanners : MonoBehaviour
         {
             return (int)idList[key];
         }
-        else { // check rotation independence & return key if it is a rotation
+        else
+        { // check rotation independence & return key if it is a rotation
             string keyConcat = key + key;
             foreach (string idKey in idList.Keys)
             {
@@ -459,7 +526,8 @@ public class Scanners : MonoBehaviour
                 currScanners[i, j].GetComponent<Renderer>().material.color = Color.magenta;
                 return -1;
             }
-            else {
+            else
+            {
                 int _locX = Mathf.RoundToInt(hit.textureCoord.x * hitTex.width);
                 int _locY = Mathf.RoundToInt(hit.textureCoord.y * hitTex.height);
                 Color pixel = hitTex.GetPixel(_locX, _locY);
@@ -506,7 +574,8 @@ public class Scanners : MonoBehaviour
                 return currID;
             }
         }
-        else {
+        else
+        {
             currScanners[i, j].GetComponent<Renderer>().material.color = Color.magenta; //paint scanner with Out of bounds / invalid  color 
             return -1;
         }
@@ -553,7 +622,8 @@ public class Scanners : MonoBehaviour
 
         if (idBuffer[index].Count < _bufferSize)
             idBuffer[index].Enqueue(currID);
-        else {
+        else
+        {
             idBuffer[index].Dequeue();
             idBuffer[index].Enqueue(currID);
         }
@@ -645,11 +715,61 @@ public class Scanners : MonoBehaviour
         }
     }
 
+    private void LoadBuildingSetting()
+    {
+        string dataAsJson = JsonParser.loadJSON(this.buildingStettingFileName, _debug);
+        if (String.IsNullOrEmpty(dataAsJson))
+        {
+            Debug.Log("No such file: " + buildingStettingFileName);
+            return;
+        }
+
+        this.buildingSettingJO = JObject.Parse(dataAsJson);
+
+        Debug.Log("!!!!");
+		foreach (Building building in SingletonT<BuildingManager>.Instance.buildingList) {
+
+			building.SetBuildingData ();
+		}
+        
+    }
+
+    private void LoadDock0Setting()
+    {
+        string dataAsJson = JsonParser.loadJSON(this.dock_0StettingFileName, _debug);
+        if (String.IsNullOrEmpty(dataAsJson))
+        {
+            Debug.Log("No such file: " + dock_0StettingFileName);
+            return;
+        }
+
+        this.dock0SettingJO = JObject.Parse(dataAsJson);
+
+	dataAsJson = JsonParser.loadJSON(this.dock_1StettingFileName, _debug);
+        if (String.IsNullOrEmpty(dataAsJson))
+        {
+            Debug.Log("No such file: " + dock_0StettingFileName);
+            return;
+        }
+
+        this.dock1SettingJO = JObject.Parse(dataAsJson);
+        //foreach (Building building in SingletonT<BuildingManager>.Instance.buildingList)
+        //{
+        //    building. ();
+        //}
+
+        
+    }
+
     /// <summary>
     /// Loads the color sampler objects from a JSON.
     /// </summary>
     private void LoadScannerSettings()
     {
+        LoadBuildingSetting();
+
+        LoadDock0Setting();
+
         Debug.Log("Loading color sampling settings from  " + _colorSettingsFileName);
 
         string dataAsJson = JsonParser.loadJSON(_colorSettingsFileName, _debug);
@@ -658,6 +778,8 @@ public class Scanners : MonoBehaviour
             Debug.Log("No such file: " + _colorSettingsFileName);
             return;
         }
+
+
 
         colorSettings = JsonUtility.FromJson<ColorSettings>(dataAsJson);
 
@@ -673,25 +795,42 @@ public class Scanners : MonoBehaviour
 
         _gridParent.transform.position = colorSettings.gridPosition;
 
-        dock.SetDockPosition(colorSettings.dockPosition);
+        //dock.SetDockPosition(colorSettings.dockPosition);
 
-        if (colorSettings.maskPointData != null && maskerList != null)
+        //if (colorSettings.maskPointData != null && maskerList != null)
+        //{
+        //    int maskIndex = 0;
+
+        //    for (int x = 0; x < numOfScannersX; x++)
+        //    {
+        //        for (int y = 0; y < numOfScannersY; y++)
+        //        {
+        //            if (maskIndex < colorSettings.maskPointData.Count)
+        //                //maskerList[x, y].SetMask(colorSettings.mask[maskIndex] == 1 ? true : false);
+        //                maskerList[x, y].SetMask(colorSettings.maskPointData[maskIndex]);
+
+        //            maskIndex++;
+        //        }
+        //    }
+        //}
+
+
+        if (colorSettings.girdDataList != null)
         {
-            int maskIndex = 0;
-
-            for (int x = 0; x < numOfScannersX; x++)
+            this.groupList.Clear();
+            foreach (GridData data in this.colorSettings.girdDataList)
             {
-                for (int y = 0; y < numOfScannersY; y++)
-                {
-                    if (maskIndex < colorSettings.maskPointData.Count)
-                        //maskerList[x, y].SetMask(colorSettings.mask[maskIndex] == 1 ? true : false);
-                        maskerList[x, y].SetMask(colorSettings.maskPointData[maskIndex]);
-
-                    maskIndex++;
-                }
+                GameObject go = (GameObject)GameObject.Instantiate(Resources.Load("Grid"));
+                go.transform.position = data.position;
+                go.transform.parent = this.transform;
+                ScannerGridGroup gridGroup = go.GetComponent<ScannerGridGroup>();
+                gridGroup.buildingID = data.buildingID;
+                gridGroup.SetScale(data.scale);
+                gridGroup.Select(false);
+                this.groupList.Add(gridGroup);
+                go.GetComponent<ScannerGridGroup>().SetIsShow(SingletonTMono<Scanners>.Instance.bShowGrid);
             }
         }
-
     }
 
     /// <summary>
@@ -714,35 +853,44 @@ public class Scanners : MonoBehaviour
                 colorSettings.id.Add(i);
                 colorSettings.color.Add(sampleColors[i]);
             }
-            else {
+            else
+            {
                 colorSettings.id[i] = i;
                 colorSettings.color[i] = sampleColors[i];
             }
         }
 
         i = 0;
-        for (int x = 0; x < numOfScannersX; x++)
+        //for (int x = 0; x < numOfScannersX; x++)
+        //{
+        //    for (int y = 0; y < numOfScannersY; y++)
+        //    {
+
+        //        int result = maskerList[x, y].isMask ? 1 : 0;
+
+        //        if (colorSettings.maskPointData.Count <= i)
+        //        {
+        //            colorSettings.maskPointData.Add(new MaskPointData(maskerList[x, y]));
+
+        //        }
+        //        else {
+        //            colorSettings.maskPointData[i] = new MaskPointData(maskerList[x, y]);
+        //        }
+
+        //        i++;
+        //    }
+        //}
+
+        this.colorSettings.girdDataList.Clear();
+
+
+        foreach (ScannerGridGroup group in this.groupList)
         {
-            for (int y = 0; y < numOfScannersY; y++)
-            {
-
-                int result = maskerList[x, y].isMask ? 1 : 0;
-
-                if (colorSettings.maskPointData.Count <= i)
-                {
-                    colorSettings.maskPointData.Add(new MaskPointData(maskerList[x, y]));
-
-                }
-                else {
-                    colorSettings.maskPointData[i] = new MaskPointData(maskerList[x, y]);
-                }
-
-                i++;
-            }
+            this.colorSettings.girdDataList.Add(new GridData(group));
         }
 
         colorSettings.gridPosition = _gridParent.transform.position;
-        colorSettings.dockPosition = dock.GetDockPosition();
+        //colorSettings.dockPosition = dock.GetDockPosition();
 
         string dataAsJson = JsonUtility.ToJson(colorSettings);
         JsonParser.writeJSON(_colorSettingsFileName, dataAsJson);
@@ -828,11 +976,96 @@ public class Scanners : MonoBehaviour
 
     }
 
-    public void UpdateBuildingID(string name)
+    void UpdateBuildingID(string name)
     {
-        if(ScannerGridGroup.selectScannerGrid!=null)
+        //Debug.Log("UpdateBuildingID  " + Tool.GetChildInDepth("MaskInputField", this.maskUI).GetComponent<InputField>().text);
+        if (ScannerGridGroup.selectScannerGrid != null)
         {
-            ScannerGridGroup.selectScannerGrid.buildingID = name;
+            ScannerGridGroup.selectScannerGrid.buildingID = Tool.GetChildInDepth("MaskInputField", this.maskUI).GetComponent<InputField>().text;
+        }
+    }
+
+    public void UpdateGridScale(float scale)
+    {
+        //Debug.Log("UpdateGridScale  "+ Tool.GetChildInDepth("SizeSlider", this.maskUI).GetComponent<Slider>().value);
+        if (ScannerGridGroup.selectScannerGrid != null)
+        {
+            ScannerGridGroup.selectScannerGrid.SetScale(Tool.GetChildInDepth("SizeSlider", this.maskUI).GetComponent<Slider>().value);
+        }
+    }
+
+    public void DeletGrid()
+    {
+        if (ScannerGridGroup.selectScannerGrid != null)
+        {
+            this.groupList.Remove(ScannerGridGroup.selectScannerGrid);
+            GameObject.Destroy(ScannerGridGroup.selectScannerGrid.gameObject);
+            ScannerGridGroup.selectScannerGrid = null;
+            
+        }
+    }
+
+    public void ShowDock0(int colorId)
+    {
+        
+
+        if (colorId == 0)
+        {
+            
+           
+            foreach (KeyValuePair<string, JToken> pair in this.dock0SettingJO)
+            {
+                if(SingletonT<BuildingManager>.Instance.buildingDic.ContainsKey(pair.Key))
+                {
+                    
+                    Building building = SingletonT<BuildingManager>.Instance.buildingDic[pair.Key];
+                    building.Show(int.Parse(pair.Value.ToString()));
+                }else
+                {
+                    Debug.Log("ShowDock0!!!!" + pair.Key);
+                    
+                }
+                
+            }
+            this.inShowDock = true;
+
+            var VideoPlayer = GameObject.Find("VideoRoot").GetComponent<VideoPlayer>();
+            VideoPlayer.clip = this.video1;
+            VideoPlayer.Stop();
+            VideoPlayer.Play();
+            Debug.Log("$$$$$");
+        }else if(colorId == 1)
+{
+   
+	foreach (KeyValuePair<string, JToken> pair in this.dock1SettingJO)
+            {
+                if(SingletonT<BuildingManager>.Instance.buildingDic.ContainsKey(pair.Key))
+                {
+                    
+                    Building building = SingletonT<BuildingManager>.Instance.buildingDic[pair.Key];
+                    building.Show(int.Parse(pair.Value.ToString()));
+                }else
+                {
+                    Debug.Log("ShowDock0!!!!" + pair.Key);
+                    
+                }
+                
+            }
+this.inShowDock = true;
+ var VideoPlayer = GameObject.Find("VideoRoot").GetComponent<VideoPlayer>();
+            VideoPlayer.clip = this.video2;
+            VideoPlayer.Stop();
+            VideoPlayer.Play();
+            Debug.Log("233$$$$$");
+}
+        else if(colorId == -1)
+        {
+            this.inShowDock = false;
+	    foreach(Building building in SingletonT<BuildingManager>.Instance.buildingList)
+{
+	building.Clear();
+}
+            
         }
     }
 }
