@@ -83,6 +83,53 @@ We can check how cityIO can work without the other components & how data sending
 _____
 # Implementation Details
 
+CityScope LivingLine Program Spefcification
+
+1.Software environment
+
+PC:Windows/MAC
+Unity:2017.4.0f
+VisualStudio 2015
+
+2. Directory structure
+	 
+Folder “Art”: All the model and texture in this folder, except need load source in “Resources” folder;
+Folder “GridDecoderAssets”: The Old CityScope source in the git;
+Folder “Plugins”: Two plugins in this folder;
+	1.“JsonDotNet”: Parse json to c# object.
+	2.”SingletonT”: singleton pattern plugin. 
+Folder “ProjMapAssets”:Include projMap material and renderTexture;
+Folder “Resource”:Need load source;
+	1.”Pic”:Building Icon.
+	2.”Grid”:the scanner grid prefab.
+Folder “Scripts”:All the script in this Folder;
+Folder “Settings”: the config json file in this Folder;
+	1.”building_list”:building ID setting and it’s connect buildingID
+	2.” Dock_0”, ” Dock_1”: when special dock with LEGO, other dock show this config color.
+Scene “CSharpScopeTemplate”:We start with this scene.
+
+
+
+# Usage Guideline
+
+	1.Double click Scene “CSharpScopeTemplate”.
+
+	2.Pressed Play Button.
+	
+	3.1.Drop down Menu: Select the last “Maskers View”.
+	3.2.Select Use webcam then the screen will show the camera view.
+	3.3.Building Grid .when it have purple means selected.Press “Create” button to create gird(5).
+	3.4.ShowTable:If selected , all the building grid will become yellow color.It’s because we can easy calibration grid location information.
+	3.5.When we click “Create” button. Then click screen , We can create buiding grid at this position.
+	3.6.When Selected a building grid, we can click Delet button to delet it.
+	3.7.When Selected a building grid, we can drag the Scale slider to scale the grid size.
+	3.8.Buildingindex is necessary for all the building grid.
+
+	4.When all the building grids have been added and their positions are all right, it’s Done.
+
+	5.Final we need adjust the light, make all the grid can be scanned correct.
+
+
 ____
 TBD: More in-depth look at scanning, adding UI elements (physical UI), maybe cityIO, and discussing what still needs an update (e.g. heatmaps).
 
