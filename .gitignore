@@ -36,3 +36,8 @@ sysinfo.txt
 *.apk
 *.unitypackage
 *.meta
+
+# Mac OS
+.DS_Store
+*.DS_Store
+Assets/Videos/.DS_Store
